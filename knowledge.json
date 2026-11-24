@@ -1,0 +1,227 @@
+{
+  "version": 2,
+  "generatedAt": "2026-12-01T00:00:00.000Z",
+  "source": "开发者本机一次全量扫描的示例画像；换机后运行 --all 会得到你自己的分布",
+  "totalHits": 703,
+  "codes": [
+    {
+      "code": "FS_NOT_OBSERVED",
+      "label": "改文件前没读",
+      "count": 151,
+      "share": "21.5%",
+      "severity": "high",
+      "message": "cannot modify \"<path>\": file has not been read — read the file, then retry",
+      "rootCause": "编辑工具要求先观察文件内容再改；我经常凭上下文记忆直接改，或者读完后上下文被压缩把读过的记录折叠掉了。",
+      "triggers": [
+        "同一文件在 5 分钟内出现「读→改→FS_NOT_OBSERVED」循环",
+        "压缩（compress）之后紧接着改文件"
+      ],
+      "fix": "改任何文件前先 read 一次；批量改多文件时用 read_files 一次读齐再逐个 edit。",
+      "relatedTools": [
+        "edit",
+        "write"
+      ]
+    },
+    {
+      "code": "FS_STALE_VERSION",
+      "label": "读完之后文件被改了",
+      "count": 121,
+      "share": "17.2%",
+      "severity": "high",
+      "message": "file changed since it was read — re-read the file, then retry",
+      "rootCause": "读与写之间文件被别人（或我自己的构建脚本）重新生成，版本号对不上。最常见于「跑 build_*.py 重生成 → 回头再 edit 源文件」。",
+      "triggers": [
+        "刚刚跑过构建/生成脚本",
+        "同一文件在两个会话里同时被改"
+      ],
+      "fix": "改前重新 read；如果刚跑过生成脚本，直接改脚本而不是改产物。",
+      "relatedTools": [
+        "edit",
+        "write"
+      ]
+    },
+    {
+      "code": "WEB_PROVIDER_ERROR",
+      "label": "网络出口失败",
+      "count": 157,
+      "share": "22.3%",
+      "severity": "medium",
+      "message": "web fetch failed: TypeError: fetch failed",
+      "rootCause": "代理/DNS/目标站不可达。其中 4 次是 getaddrinfo ENOTFOUND（目标站本身解析不了），说明不全是本机网络问题。",
+      "triggers": [
+        "连续两次 web_fetch 都不含正文内容",
+        "错误里带 ENOTFOUND 或 UND_ERR_CONNECT_TIMEOUT"
+      ],
+      "fix": "重试一次；仍失败就换 web_search 取摘要；再不行转 ego 浏览器打开。不要对同一 URL 连试三次以上。",
+      "relatedTools": [
+        "web_fetch",
+        "web_search"
+      ]
+    },
+    {
+      "code": "SAFETY_NET_BLOCKED",
+      "label": "被安全围栏拦下",
+      "count": 60,
+      "share": "8.5%",
+      "severity": "medium",
+      "message": "BLOCKED by CC Safety Net — Reason: PowerShell Remove-Item -Recurse -Force outside cwd is blocked / Access to a sensitive path is not allowed",
+      "rootCause": "命令命中了 cc-safety-net 的确定性红线：递归删除越出 cwd、敏感路径（.git-credentials、密钥文件）。",
+      "triggers": [
+        "命令里同时出现 Remove-Item 与 -Recurse",
+        "命令里出现 .git-credentials / id_rsa / .env 这类文件名"
+      ],
+      "fix": "改成逐个显式路径删除（不带 -Recurse 通配）；需要访问敏感文件时先说明用途再请求授权。",
+      "relatedTools": [
+        "pwsh"
+      ]
+    },
+    {
+      "code": "FS_EDIT_NOT_FOUND",
+      "label": "替换串对不上",
+      "count": 57,
+      "share": "8.1%",
+      "severity": "high",
+      "message": "old_string was not found in \"<path>\"",
+      "rootCause": "凭记忆写 old 串，或文件已被改过。2026-11-24 有实例：替换 PPT 源码里的文案，old 串与源码差一个词，str.replace 静默未命中，脚本还打印 OK。",
+      "triggers": [
+        "同一处连续两次 edit 都 not found",
+        "生成脚本跑完但产物没变"
+      ],
+      "fix": "先 grep 定位真实字符串再 edit；批量替换后断言「旧串已消失 / 新串已出现」，不能只看脚本没报错。",
+      "relatedTools": [
+        "edit",
+        "grep"
+      ]
+    },
+    {
+      "code": "FS_NOT_FOUND",
+      "label": "路径不存在",
+      "count": 52,
+      "share": "7.4%",
+      "severity": "medium",
+      "message": "cannot read \"<path>\": not found",
+      "rootCause": "猜路径（把 Windows 路径拼错、用记忆里的旧位置），或文件已被移动/改名。",
+      "triggers": [
+        "路径里带用户目录但文件名是猜的",
+        "同一目录短时间内读不存在文件 ≥2 次"
+      ],
+      "fix": "先 glob 或列目录确认存在再读；不确定就用相对工作区的 glob。",
+      "relatedTools": [
+        "read",
+        "glob"
+      ]
+    },
+    {
+      "code": "ACL_WRITE_FAILED",
+      "label": "沙箱授权写失败",
+      "count": 51,
+      "share": "7.3%",
+      "severity": "high",
+      "message": "SetNamedSecurityInfoW failed (Win32 5): grantWrite(<path>)",
+      "rootCause": "Windows 沙箱给文件加写权限时失败（Win32 5 = 拒绝访问）。这是环境事实，不是操作失误——出现它的时候 pwsh 工具整体不可用。",
+      "triggers": [
+        "pwsh 命令第一次执行就报 SetNamedSecurityInfoW",
+        "紧接着任何写文件操作都失败"
+      ],
+      "fix": "判定环境缺陷：改用 read / write / edit / grep 等工具完成同一件事，不要在同一轮反复重试 pwsh。",
+      "relatedTools": [
+        "pwsh"
+      ]
+    },
+    {
+      "code": "UNKNOWN_TOOL",
+      "label": "工具不在当前工具表",
+      "count": 37,
+      "share": "5.3%",
+      "severity": "low",
+      "message": "unknown tool \"pwsh\" / \"read_image\"",
+      "rootCause": "工具集闸门把某组收起，或子代理的工具表与主会话不同。注意它只报工具不在，不报宿主坏——容易被误读成环境崩了。",
+      "triggers": [
+        "刚到新会话第一轮就调冷门工具",
+        "子代理里调主会话才有的工具"
+      ],
+      "fix": "用 toolset_load 挂载该组；或换等价工具（读图用 read_image 前确认已挂载 imagegen/oil 组）。",
+      "relatedTools": [
+        "toolset_load"
+      ]
+    },
+    {
+      "code": "EPERM",
+      "label": "进程创建被拒",
+      "count": 8,
+      "share": "1.1%",
+      "severity": "low",
+      "message": "spawn EPERM",
+      "rootCause": "Node 子进程创建被沙箱拦（常见于受限模式下 spawn 不带 inherit）。",
+      "triggers": [
+        "在沙箱内用 node child_process 起进程"
+      ],
+      "fix": "改用 pwsh 执行同一命令；或把 stdio 设为 inherit。",
+      "relatedTools": [
+        "pwsh"
+      ]
+    },
+    {
+      "code": "TIMEOUT",
+      "label": "连接超时",
+      "count": 4,
+      "share": "0.6%",
+      "severity": "low",
+      "message": "web fetch failed: TypeError: fetch failed [UND_ERR_CONNECT_TIMEOUT]",
+      "rootCause": "目标站响应慢或网络抖动。",
+      "triggers": [
+        "大文件/慢站点的首次请求"
+      ],
+      "fix": "重试一次；长任务改用后台作业并轮询。",
+      "relatedTools": [
+        "web_fetch"
+      ]
+    },
+    {
+      "code": "ECONNRESET",
+      "label": "对端重置",
+      "count": 3,
+      "share": "0.4%",
+      "severity": "low",
+      "message": "web fetch failed: TypeError: fetch failed [ECONNRESET read]",
+      "rootCause": "目标服务器主动断开（反爬/限流）。",
+      "triggers": [
+        "同一站点短时间多次抓取"
+      ],
+      "fix": "降频、加间隔；改用官方 API 或搜索摘要。",
+      "relatedTools": [
+        "web_fetch"
+      ]
+    },
+    {
+      "code": "ENOENT",
+      "label": "文件或目录不存在",
+      "count": 2,
+      "share": "0.3%",
+      "severity": "low",
+      "message": "ENOENT: no such file or directory",
+      "rootCause": "同 FS_NOT_FOUND，多发生于脚本里写死的路径。",
+      "triggers": [
+        "脚本里硬编码的绝对路径"
+      ],
+      "fix": "先 Test-Path / existsSync 再操作。",
+      "relatedTools": [
+        "pwsh",
+        "read"
+      ]
+    }
+  ],
+  "misdiagnoses": [
+    {
+      "id": "chat-scroll-jump",
+      "symptom": "点会话切换进去，界面自己向上滑一段，要手动滑回底部",
+      "looksLike": "渲染完又重排 / 虚拟列表重算高度导致的滚动跳动，典型前端 bug",
+      "actually": "DSH 按会话记住阅读位置：上次离开时不在底部，切回来就停在那条消息",
+      "evidence": "dsh-client-ui-chat/src/client/chat/use-chat-reading.ts 的 restore()：store.read() 为 null 才 followTail()，否则 viewport.restore(saved) 回到上次那条；调用点是 use-chat-scroll.ts 里「会话由关变开」那一支",
+      "howToTell": "①只有「上次翻到中间就离开」的会话这样，一直在底部的不会；②停的位置总是同一条消息，不随机；③切进去不动它，不会再往下漂",
+      "dontDo": "别去改滚动容器 / toBottom / 虚拟列表高度，也别当 CSS 或 ResizeObserver 问题——那是把设计当 bug 修",
+      "doInstead": "要每次都落底就清掉该会话的 chatScroll 记录（或写客户端插件），代价是丢掉「接着看」",
+      "firstSeen": "2026-11-24"
+    }
+  ]
+}

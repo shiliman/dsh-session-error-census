@@ -1,0 +1,6 @@
+node_modules/
+*.log
+.DS_Store
+Thumbs.db
+error-atlas/
+诊断-*.md
