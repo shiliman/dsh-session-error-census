@@ -26,6 +26,16 @@ Top 3 合计 42 次，占 53.8%。
 
 ---
 
+## 装法
+
+把整个目录丢进 DSH 技能目录即可（宿主自动发现，无需 pnpm / 重启）：
+
+```
+~/.dsh/skills/dsh-session-error-census/
+```
+
+仓库里的文件是**平铺**的（scan.mjs 与 knowledge.json 同级），脚本里做了两种布局的自动探测；如果你按 scripts/ + eferences/ + 	ests/ 分开放，也一样能跑。
+
 ## 为什么需要它
 
 DSH 已经有一个 `dsh-health` 查**环境状态**：bundles 有没有悬空、版本闸门有没有钉死、本地补丁还在不在。

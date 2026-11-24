@@ -3,10 +3,19 @@ import fs from 'node:fs'
 import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
-import { findSessionFiles, scanFiles, classify } from '../scripts/scanner.mjs'
+const HERE = path.dirname(fileURLToPath(import.meta.url))
+const SCANNER = [
+  path.join(HERE, '..', 'scripts', 'scanner.mjs'),
+  path.join(HERE, 'scanner.mjs'),
+].find((p) => fs.existsSync(p))
+const { findSessionFiles, scanFiles, classify } = await import('file://' + SCANNER.replace(/\\/g, '/'))
 
-const ROOT = path.dirname(path.dirname(fileURLToPath(import.meta.url)))
-const KB_FILE = path.join(ROOT, 'references', 'knowledge.json')
+const ROOT = path.dirname(HERE)
+const KB_FILE = [
+  path.join(ROOT, 'references', 'knowledge.json'),
+  path.join(ROOT, 'knowledge.json'),
+  path.join(HERE, 'knowledge.json'),
+].find((p) => fs.existsSync(p)) || path.join(ROOT, 'references', 'knowledge.json')
 
 let pass = 0, fail = 0
 const check = (name, cond, detail = '') => {

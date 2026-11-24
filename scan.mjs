@@ -15,7 +15,13 @@ import { findSessionFiles, scanFiles, classify } from './scanner.mjs'
 
 const SESSIONS = path.join(os.homedir(), '.dsh', 'sessions')
 const OUT_DIR = path.join(os.homedir(), '.dsh', 'error-atlas')
-const KB_FILE = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'references', 'knowledge.json')
+// 兼容两种布局：技能目录（scripts/ + references/）与仓库平铺（全在根）。
+const HERE = path.dirname(fileURLToPath(import.meta.url))
+const KB_FILE = [
+  path.join(HERE, '..', 'references', 'knowledge.json'),
+  path.join(HERE, 'knowledge.json'),
+  path.join(HERE, '..', 'knowledge.json'),
+].find((p) => fs.existsSync(p)) || path.join(HERE, '..', 'references', 'knowledge.json')
 
 function arg(name, def) {
   const i = process.argv.indexOf('--' + name)
