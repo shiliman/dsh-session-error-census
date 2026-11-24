@@ -67,7 +67,7 @@ DSH 已经有一个 `dsh-health` 查**环境状态**：bundles 有没有悬空�
 git clone https://github.com/shiliman/dsh-session-error-census "$HOME\.dsh\skills\dsh-session-error-census"
 
 # 2. 验证
-node "$HOME\.dsh\skills\dsh-session-error-census\tests\selftest.mjs"
+node "$HOME\.dsh\skills\dsh-session-error-census\selftest.mjs"
 ```
 
 下一轮对话里，`skill` 工具就能加载它。
@@ -79,7 +79,7 @@ node "$HOME\.dsh\skills\dsh-session-error-census\tests\selftest.mjs"
 
 ```powershell
 $node = 'node'
-$scan = "$HOME\.dsh\skills\dsh-session-error-census\scripts\scan.mjs"
+$scan = "$HOME\.dsh\skills\dsh-session-error-census\scan.mjs"
 
 & $node $scan --days 7                      # 最近 7 天（默认 30 天，最多 120 个文件）
 & $node $scan --all                         # 全量（全部会话文件，约 30 秒）
@@ -140,7 +140,7 @@ $scan = "$HOME\.dsh\skills\dsh-session-error-census\scripts\scan.mjs"
 ## 自检
 
 ```powershell
-& $node "$HOME\.dsh\skills\dsh-session-error-census\tests\selftest.mjs"
+& $node "$HOME\.dsh\skills\dsh-session-error-census\selftest.mjs"
 ```
 
 24 项断言：知识库完整性（含误判清单的结构与证据完整性）、12 种样本归类、真实日志扫描、报告目录可写。
